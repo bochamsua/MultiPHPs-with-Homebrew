@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+app="$(basename "$0")"
+phpversion="$1"
+action="$2"
+
+brew_array=("5.6" "7.0" "7.1" "7.2")
+
+
+if [ "$phpversion" == "" ]; then
+    echo "Restarting all PHP services"
+
+    for i in ${brew_array[@]}
+        do
+            launchctl unload ~/Library/LaunchAgents/homebrew.mxcl.php@"$i".plist 2> /dev/null
+            launchctl load ~/Library/LaunchAgents/homebrew.mxcl.php@"$i".plist 2> /dev/null
+            echo "Restarted PHP v$i"
+        done
+
+
+    echo "Usage: ${app} <php_version> <start | stop | restart>"
+    echo ""
+
+    exit 1
+
+else     
+    STATUS="started"
+    if [ "$action" == "start" ] || [ "$action" == "s" ]; then
+        launchctl load ~/Library/LaunchAgents/homebrew.mxcl.php@"${phpversion}".plist 2> /dev/null
+        STATUS="started"
+    elif [ "$action" == "stop" ] || [ "$action" == "o" ]; then
+        launchctl unload ~/Library/LaunchAgents/homebrew.mxcl.php@"${phpversion}".plist 2> /dev/null
+        STATUS="stopped"
+    else
+        launchctl unload ~/Library/LaunchAgents/homebrew.mxcl.php@"${phpversion}".plist 2> /dev/null
+        launchctl load ~/Library/LaunchAgents/homebrew.mxcl.php@"${phpversion}".plist 2> /dev/null
+        STATUS="restarted"
+    fi
+    
+    echo "PHP v$phpversion has been $STATUS"
+
+fi
+

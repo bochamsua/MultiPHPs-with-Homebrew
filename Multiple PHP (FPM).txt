@@ -1,0 +1,308 @@
+Install Apache-PHP-MariaDB using Homebrew
+
+Original tutorial here: https://getgrav.org/blog/macos-sierra-apache-multiple-php-versions
+
+1. Install xCode
+
+xcode-select --install
+
+2. Install Homebrew
+
+ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+
+brew doctor
+
+3. Unload pre-installed apache come with macOS
+
+sudo apachectl stop && sudo launchctl unload -w /System/Library/LaunchDaemons/org.apache.httpd.plist 2>/dev/null
+
+4. Install Apache
+
+brew install httpd
+
+->Make it autostat with system:
+sudo brew services start httpd
+
+	Some commands:
+		sudo apachectl start
+		sudo apachectl stop
+		sudo apachectl -k restart
+
+5. Config apache
+
+/usr/local/etc/httpd/httpd.conf
+
+->Change:
+Listen 80
+
+
+
+->Uncomment:
+LoadModule rewrite_module lib/httpd/modules/mod_rewrite.so
+LoadModule vhost_alias_module lib/httpd/modules/mod_vhost_alias.so
+
+LoadModule proxy_module lib/httpd/modules/mod_proxy.so
+LoadModule proxy_fcgi_module lib/httpd/modules/mod_proxy_fcgi.so
+
+
+
+
+->Uncomment:
+Include /usr/local/etc/httpd/extra/httpd-vhosts.conf
+
+->Change:
+User bosua
+Group staff
+
+->Change:
+DocumentRoot "/Volumes/Data/PHPProjects"
+<Directory "/Volumes/Data/PHPProjects">
+
+...  AllowOverride All
+
+->Change: 
+ServerName localhost
+
+
+->Change and add:
+<IfModule dir_module>
+    DirectoryIndex index.php index.html
+</IfModule>
+
+<FilesMatch \.php$>
+    SetHandler application/x-httpd-php
+</FilesMatch>
+
+
+6. Install PHP
+
+brew install php@5.6 && brew install php@7.0 && brew install php@7.1 && brew install php@7.2
+
+Edit configuration:
+
+/usr/local/etc/php/5.6/php.ini
+/usr/local/etc/php/7.0/php.ini
+/usr/local/etc/php/7.1/php.ini
+/usr/local/etc/php/7.2/php.ini
+
+--Instal Tidy
+
+brew tap kabel/php-ext && brew install kabel/php-ext/php@7.0-tidy
+
+
+PHP 5.6
+Edit: /usr/local/etc/php/5.6/php-fpm.conf
+Change: listen = 127.0.0.1:9056
+
+PHP 7.x
+/usr/local/etc/php/7.0/php-fpm.d/www.conf
+/usr/local/etc/php/7.1/php-fpm.d/www.conf 
+/usr/local/etc/php/7.2/php-fpm.d/www.conf 
+
+change: listen = 127.0.0.1:9070/71/72... corresponding to php version
+
+
+-- Autoload---
+
+ln -sfv /usr/local/opt/php@5.6/homebrew.mxcl.php@5.6.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/homebrew.mxcl.php@5.6.plist
+
+
+ln -sfv /usr/local/opt/php@7.0/homebrew.mxcl.php@7.0.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/homebrew.mxcl.php@7.0.plist
+
+
+ln -sfv /usr/local/opt/php@7.1/homebrew.mxcl.php@7.1.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/homebrew.mxcl.php@7.1.plist
+
+
+->For latest version, the plist file is a little different:
+
+ln -sfv /usr/local/opt/php@7.2/homebrew.mxcl.php.plist ~/Library/LaunchAgents/homebrew.mxcl.php@7.2.plist
+launchctl load ~/Library/LaunchAgents/homebrew.mxcl.php@7.2.plist
+
+
+7. PHP Switcher & Restarter:
+7.1 PHP Switcher:
+
+cp sphp /usr/local/bin/sphp && chmod +x /usr/local/bin/sphp
+
+-> Check PATH:
+ echo $PATH
+
+Add this to .profile if necessary:
+export PATH=/usr/local/bin:/usr/local/sbin:$PATH
+
+
+Usage:
+sphp 5.6
+sphp 7.0
+sphp 7.1
+sphp 7.2
+
+7.2 PHP FPM Service
+cp fpm /usr/local/bin/fpm && chmod +x /usr/local/bin/fpm
+
+Usage:
+fpm <php_version> <start[s]| stop[o] | restart[r]> (r is used by default if no option specified)
+For example: fpm 7.1 o
+
+
+
+
+8. Install MariaDB
+brew update  && brew install mariadb
+
+->Make it autostart with system:
+brew services start mariadb
+
+
+->Change mysql password:
+/usr/local/bin/mysql_secure_installation
+
+->Stop mysql:
+brew services stop mariadb
+
+
+9. Config Virtual Hosts (vhosts)
+/usr/local/etc/httpd/extra/httpd-vhosts.conf
+
+
+10. Install Dnsmasq to auto resolve to localhost
+brew install dnsmasq
+
+--> Add .test to dnsmasq
+echo 'address=/.test/127.0.0.1' > /usr/local/etc/dnsmasq.conf
+
+->Auto start dnsmasq with system:
+sudo brew services start dnsmasq
+
+-> Add to resolver:
+sudo mkdir -v /etc/resolver && sudo bash -c 'echo "nameserver 127.0.0.1" > /etc/resolver/test' && sudo brew services restart dnsmasq
+
+
+11. Install YAML
+Switch to PHP version you want then run this:
+
+sphp 7.0 && brew install libyaml && pecl uninstall -r yaml && pecl install yaml
+
+IF YOU SEE "pecl: command not found", PLEASE at least run PHP switcher once (e.g: sphp 7.0)
+
+DONT FORGET TO REMOVE LINES ADDED BY YAML IN /usr/local/etc/php/7.0/php.ini
+
+then 
+
+subl /usr/local/etc/php/7.0/conf.d/ext-yaml.ini
+
+and add:
+[yaml]
+extension="yaml.so"
+
+
+12. Install and config xDebug
+Switch to PHP version you want then:
+
+
+sphp 7.0 && pecl uninstall -r xdebug && pecl install xdebug
+
+For PHP 5.6 we need xdebug 2.5.5:
+sphp 5.6 && pecl install xdebug-2.5.5
+
+then
+subl /usr/local/etc/php/7.0/conf.d/ext-xdebug.ini
+
+and add:
+
+[xdebug]
+zend_extension="xdebug.so"
+xdebug.profiler_enable = 0
+xdebug.profiler_output_dir = "/usr/local/var/cache"
+xdebug.profiler_output_name = "%R-%t.cgout"
+xdebug.remote_enable = 1
+xdebug.remote_port = 9000
+xdebug.remote_autostart = 0
+
+Here we disable auto start to make php scripts load faster, but we will need to create Browser bookmark in order to start/stop debugging:
+
+Start Debug:
+javascript:(/** @version 0.5.2 */function() {document.cookie='XDEBUG_SESSION='+'PHPSTORM'+';path=/;';})()
+
+Stop Debug:
+javascript:(/** @version 0.5.2 */function() {document.cookie='XDEBUG_SESSION='+''+';expires=Mon, 05 Jul 2000 00:00:00 GMT;path=/;';})()
+
+xDebug switcher:
+
+cp x /usr/local/bin/x
+chmod +x /usr/local/bin/x
+
+Usage: x <php_version> <on | off>
+
+13. Opcache
+
+cp o /usr/local/bin/o
+chmod +x /usr/local/bin/o
+
+Usage: o <php_version> <on | off>
+
+
+14. SSL
+
+subl /usr/local/etc/httpd/httpd.conf
+
+->Uncomment: 
+LoadModule socache_shmcb_module lib/httpd/modules/mod_socache_shmcb.so
+...
+LoadModule ssl_module lib/httpd/modules/mod_ssl.so
+...
+Include /usr/local/etc/httpd/extra/httpd-ssl.conf
+
+--Config SSL
+subl /usr/local/etc/httpd/extra/httpd-ssl.conf
+
+->Change: 8443 --> 443
+
+then find:
+
+<VirtualHost _default_:8443>
+
+#   General setup for the virtual host
+DocumentRoot "/usr/local/var/www"
+ServerName www.example.com:8443
+
+and replace the 8443 references with 443 and note the commenting:
+
+<VirtualHost _default_:443>
+
+#   General setup for the virtual host
+#DocumentRoot "/usr/local/var/www"
+#ServerName www.example.com:443
+
+After saving this file, you should then open up your /usr/local/etc/httpd/extra/httpd-vhosts.conf to add appropriate SSL based virtual hosts.
+subl -e /usr/local/etc/httpd/extra/httpd-vhosts.conf
+
+
+<VirtualHost *:443>
+    DocumentRoot "/Volumes/Data/PHPProjects"
+    ServerName localhost
+    SSLEngine on
+    SSLCertificateFile "/usr/local/etc/httpd/server.crt"
+    SSLCertificateKeyFile "/usr/local/etc/httpd/server.key"
+</VirtualHost>
+
+
+--Generating SSL
+cd /usr/local/etc/httpd && openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt
+
+
+Then all you need to do now is double check your Apache configuration syntax:
+
+$ sudo apachectl configtest
+
+If all goes well, restart Apache:
+
+$ sudo apachectl -k restart
+
+
+
+
+
