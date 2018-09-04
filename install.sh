@@ -72,7 +72,7 @@ if xcode-select --install 2>&1 | grep installed; then
 			brew install php@"$i"
       cp /usr/local/etc/php/"$i"/php.ini /usr/local/etc/php/"$i"/php.ini.bak
       cp -rf conf/* /usr/local/etc/php/"$i"/conf.d/
-
+sphp "$i"
 			if [ "$i" == "7.2" ]; then
 				ln -sfv /usr/local/opt/php@"$i"/homebrew.mxcl.php.plist ~/Library/LaunchAgents/homebrew.mxcl.php@"$i".plist
         brew install kabel/php-ext/php-tidy
